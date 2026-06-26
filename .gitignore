@@ -1,0 +1,38 @@
+# ===========================
+# JRF OS - Root .gitignore
+# ===========================
+
+# H2 Database files (personal data, never commit)
+backend/jrfosdb.mv.db
+backend/jrfosdb.trace.db
+*.mv.db
+*.trace.db
+
+# File uploads (PDFs, resources you upload)
+backend/uploads/
+
+# Maven build output
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+
+# Frontend build output
+frontend/dist/
+frontend/node_modules/
+
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+application-local.yml
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.suo
+*.user

@@ -1,0 +1,46 @@
+server:
+  port: 8080
+
+spring:
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+  datasource:
+    # Store the database file in the backend directory, regardless of where the JVM is launched from.
+    # ${user.home} resolves to C:\Users\<you> on Windows — keeps data safe and predictable.
+    url: jdbc:h2:file:${user.home}/.jrfos/jrfosdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;AUTO_RECONNECT=TRUE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 30000
+      connection-timeout: 20000
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+    open-in-view: false
+
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+app:
+  upload-dir: ./uploads
+
+gemini:
+  api:
+    # Key is loaded from GEMINI_API_KEY environment variable, with a fallback default.
+    # To set it permanently: add GEMINI_API_KEY=your_key to your system environment variables,
+    # OR simply edit the 'key' value below directly for local use.
+    key: ${GEMINI_API_KEY:YOUR_GEMINI_API_KEY_HERE}
+    url: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent
