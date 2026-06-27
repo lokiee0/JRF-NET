@@ -96,6 +96,14 @@ public class QuizService {
         quiz.setTotalQuestions(questions.size());
         quiz.setQuestions(questions);
 
+        // Bug fix: previously a quiz could be saved with 0 questions (AI returned an
+        // empty array, or a MANUAL-source quiz with no way to add questions). That
+        // produced a 0/0 NaN on submission and crashed the frontend when opened.
+        if (questions.isEmpty()) {
+            throw new IllegalStateException(
+                    "Quiz could not be created: no questions were generated. Please try again.");
+        }
+
         return mapToResponseFull(quizRepository.save(quiz), false);
     }
 
@@ -124,7 +132,10 @@ public class QuizService {
 
         quiz.setTakenAt(LocalDateTime.now());
         quiz.setCorrectAnswers(correctAnswers);
-        quiz.setScorePercentage((double) correctAnswers / quiz.getTotalQuestions() * 100);
+        // Bug fix: this used to divide by quiz.getTotalQuestions() with no zero-check,
+        // producing NaN (which Jackson cannot serialize) if a quiz had no questions.
+        int totalQuestions = quiz.getTotalQuestions() != null ? quiz.getTotalQuestions() : 0;
+        quiz.setScorePercentage(totalQuestions > 0 ? ((double) correctAnswers / totalQuestions) * 100 : 0.0);
 
         return mapToResponseFull(quizRepository.save(quiz), true);
     }

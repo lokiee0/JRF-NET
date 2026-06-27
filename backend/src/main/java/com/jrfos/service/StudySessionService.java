@@ -44,6 +44,13 @@ public class StudySessionService {
                     .orElseThrow(() -> new ResourceNotFoundException("Topic", "id", request.getTopicId()));
         }
 
+        // Bug fix: previously startTime/endTime were trusted as-is, so a bad request
+        // or clock-skew bug could produce a negative duration that silently polluted
+        // streak/analytics numbers.
+        if (!request.getEndTime().isAfter(request.getStartTime())) {
+            throw new IllegalArgumentException("End time must be after start time.");
+        }
+
         int durationMinutes = (int) Duration.between(request.getStartTime(), request.getEndTime()).toMinutes();
 
         StudySession session = StudySession.builder()

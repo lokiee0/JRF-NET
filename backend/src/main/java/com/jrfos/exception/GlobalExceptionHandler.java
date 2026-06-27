@@ -63,6 +63,31 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handles invalid-state errors (e.g. "Quiz has already been submitted.") with a
+     * 409 Conflict and the real message, instead of letting them fall through to the
+     * generic 500 handler which discards the original message.
+     */
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIllegalStateException(IllegalStateException ex) {
+        log.warn("Illegal state: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    /**
+     * Handles bad-input errors (e.g. "Either a file or a valid URL link must be
+     * provided.") with a 400 Bad Request and the real message.
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIllegalArgumentException(IllegalArgumentException ex) {
+        log.warn("Bad request: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    /**
      * Handles all uncaught exceptions as a fallback.
      *
      * @param ex the Exception

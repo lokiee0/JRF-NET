@@ -36,11 +36,14 @@ spring:
 
 app:
   upload-dir: ./uploads
+  # Target UGC NET exam date. Keep this in sync with frontend/src/lib/constants.js (EXAM_DATE).
+  exam-date: ${EXAM_DATE:2025-12-15}
+  exam-label: ${EXAM_LABEL:UGC NET JRF Computer Science}
 
 gemini:
   api:
     # Key is loaded from GEMINI_API_KEY environment variable, with a fallback default.
     # To set it permanently: add GEMINI_API_KEY=your_key to your system environment variables,
     # OR simply edit the 'key' value below directly for local use.
-    key: ${GEMINI_API_KEY:YOUR_GEMINI_API_KEY_HERE}
+    key: AIzaSyDKO0F_gHE9Q5tYOglgAiRcODF8eU0KsvQ
     url: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent

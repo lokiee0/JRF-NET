@@ -46,7 +46,12 @@ public class ChatService {
         chatMessageRepository.save(userMessage);
 
         // 2. Fetch history for context (limit to last 20 messages for token efficiency)
-        List<ChatMessage> history = chatMessageRepository.findAllByOrderByCreatedAtAsc();
+        // Bug fix: this used to always pull ALL messages regardless of topic, so the
+        // AI's context didn't match what getChatHistory() shows the user for a given
+        // topic filter. Now it's scoped the same way.
+        List<ChatMessage> history = (request.getTopicId() != null)
+                ? chatMessageRepository.findByTopicIdOrderByCreatedAtAsc(request.getTopicId())
+                : chatMessageRepository.findAllByOrderByCreatedAtAsc();
         if (history.size() > 20) {
             history = history.subList(history.size() - 20, history.size());
         }

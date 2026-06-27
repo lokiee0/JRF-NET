@@ -51,6 +51,18 @@ export default function ActiveQuizPage() {
   if (!quiz) return <div className="p-20 text-center">Quiz not found</div>;
 
   const questions = quiz.questions || [];
+  // Defensive guard: a quiz with 0 questions (e.g. from old/corrupted data) would
+  // otherwise crash below on `currentQuestion.question` being undefined.
+  if (questions.length === 0) {
+    return (
+      <div className="p-20 text-center text-gray-400">
+        This quiz has no questions and can't be taken.
+        <div className="mt-4">
+          <Button variant="ghost" onClick={() => navigate('/quizzes')}>Back to Quizzes</Button>
+        </div>
+      </div>
+    );
+  }
   const currentQuestion = questions[currentQuestionIdx];
   const isCompleted = !!quiz.takenAt;
 

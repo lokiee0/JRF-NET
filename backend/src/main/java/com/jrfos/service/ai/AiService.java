@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -14,6 +15,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import com.jrfos.service.AnalyticsService;
 import com.jrfos.dto.response.AnalyticsResponse;
 
@@ -27,12 +30,37 @@ public class AiService {
     @Value("${gemini.api.url}")
     private String apiUrl;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    // Configurable exam date/label — keep these in sync with frontend/src/lib/constants.js
+    @Value("${app.exam-date:2025-12-15}")
+    private String examDateStr;
+
+    @Value("${app.exam-label:UGC NET JRF Computer Science}")
+    private String examLabel;
+
+    private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final AnalyticsService analyticsService;
 
     public AiService(AnalyticsService analyticsService) {
         this.analyticsService = analyticsService;
+
+        // Bug fix: previously RestTemplate had no connect/read timeout, so a hung
+        // Gemini API call would block the request thread indefinitely.
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(10_000);
+        factory.setReadTimeout(30_000);
+        this.restTemplate = new RestTemplate(factory);
+    }
+
+    /**
+     * Builds the headers for a Gemini API call, sending the key as a header
+     * instead of a URL query parameter (query params leak into access/proxy logs).
+     */
+    private HttpHeaders buildHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("x-goog-api-key", apiKey);
+        return headers;
     }
 
     public String generateSummary(String content) {
@@ -42,10 +70,9 @@ public class AiService {
         }
 
         try {
-            String url = apiUrl + "?key=" + apiKey;
+            String url = apiUrl;
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpHeaders headers = buildHeaders();
 
             Map<String, Object> part = new HashMap<>();
             part.put("text", "Summarize the following study notes concisely in markdown format. Extract the key concepts and formulas if any:\n\n" + content);
@@ -87,10 +114,9 @@ public class AiService {
         }
 
         try {
-            String url = apiUrl + "?key=" + apiKey;
+            String url = apiUrl;
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpHeaders headers = buildHeaders();
 
             String prompt = String.format(
                 "Generate %d multiple-choice questions for the topic: '%s'. " +
@@ -145,10 +171,9 @@ public class AiService {
         }
 
         try {
-            String url = apiUrl + "?key=" + apiKey;
+            String url = apiUrl;
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpHeaders headers = buildHeaders();
 
             String prompt = String.format(
                 "Generate %d flashcards for the topic: '%s'. " +
@@ -195,25 +220,32 @@ public class AiService {
         }
 
         try {
-            String url = apiUrl + "?key=" + apiKey;
+            String url = apiUrl;
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpHeaders headers = buildHeaders();
 
             List<Map<String, Object>> contentsList = new ArrayList<>();
             
             // Fetch User Context for AI Memories
             AnalyticsResponse analytics = analyticsService.getDashboardAnalytics();
-            // Calculate days remaining until UGC NET exam (December 2025)
-            java.time.LocalDate examDate = java.time.LocalDate.of(2025, 12, 15);
-            long daysUntilExam = java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.now(), examDate);
+            // Bug fix: exam date used to be hardcoded to Dec 15, 2025. Now read from
+            // app.exam-date (configurable via application.yml / EXAM_DATE env var),
+            // so it stays in sync with frontend/src/lib/constants.js.
+            LocalDate examDate;
+            try {
+                examDate = LocalDate.parse(examDateStr);
+            } catch (Exception ex) {
+                log.warn("Invalid app.exam-date value '{}', falling back to default", examDateStr);
+                examDate = LocalDate.of(2025, 12, 15);
+            }
+            long daysUntilExam = ChronoUnit.DAYS.between(LocalDate.now(), examDate);
             daysUntilExam = Math.max(0, daysUntilExam);
 
             StringBuilder contextBuilder = new StringBuilder();
             contextBuilder.append("You are an elite AI Mentor for a student preparing for the UGC NET JRF Computer Science exam. ");
             contextBuilder.append("Your name is 'JRF Mentor'. Be concise, accurate, encouraging, and exam-focused.\n\n");
             contextBuilder.append("EXAM CONTEXT:\n");
-            contextBuilder.append("- Target Exam: UGC NET JRF Computer Science (December 2025)\n");
+            contextBuilder.append(String.format("- Target Exam: %s (%s)\n", examLabel, examDate));
             contextBuilder.append(String.format("- Days Remaining: %d days\n", daysUntilExam));
             contextBuilder.append("- JRF cutoff: approximately 180/300 (60%%) for Computer Science\n\n");
             contextBuilder.append("STUDENT PROGRESS (Memory):\n");

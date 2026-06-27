@@ -136,7 +136,7 @@ export default function UploadResourceModal({ isOpen, onClose }) {
                     </p>
                     {file && <p className="text-xs text-emerald-400 font-medium">{file.name}</p>}
                   </div>
-                  <input type="file" className="hidden" onChange={(e) => setFile(e.target[0])} accept={type === 'PDF' || type === 'PYQ' ? '.pdf' : 'image/*'} />
+                  <input type="file" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} accept={type === 'PDF' || type === 'PYQ' ? '.pdf' : 'image/*'} />
                 </label>
               </div>
             </div>

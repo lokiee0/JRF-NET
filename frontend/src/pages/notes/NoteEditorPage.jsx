@@ -55,8 +55,13 @@ export default function NoteEditorPage() {
       queryClient.invalidateQueries({ queryKey: ['notes'] });
       if (!noteIdRef.current || noteIdRef.current === 'new') {
         // First-time save — update ref so auto-save PUTs from now on
-        noteIdRef.current = String(res.data.id);
-        queryClient.setQueryData(['note', id], res);
+        const newId = String(res.data.id);
+        noteIdRef.current = newId;
+        // Bug fix: this used to set the cache under ['note', id] where `id` was
+        // still the stale closure value 'new', so the cache write never matched
+        // the key the page reads from after navigating — causing an unnecessary
+        // refetch every first save. Now it's set under the real new id.
+        queryClient.setQueryData(['note', newId], res);
         // Replace URL so the editor keeps working after first create
         navigate(`/notes/${res.data.id}`, { replace: true });
       }
